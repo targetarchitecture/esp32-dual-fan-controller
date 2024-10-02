@@ -1,89 +1,77 @@
-/*
-MQTT to i2c
-*/
+// Basic demo for readings from Adafruit EMC2101
 #include <Arduino.h>
+#include <Adafruit_EMC2101.h>
 #include <Wire.h>
-#include <map>
-#include <Preferences.h>
-#include "defines.h"
-#include "IoT.h"
-#include "WifiMgr.h"
-#include "i2c.h"
 
-Preferences preferences;
+//Adafruit_EMC2101  emc2101_1;
+Adafruit_EMC2101  emc2101_2;
 
-std::string storedSSID;
-std::string storedWifiPassword;
+#define SDA_1 27
+#define SCL_1 26
 
-std::string mqtt_server;
-std::string mqtt_user;
-std::string mqtt_password;
+#define SDA_2 33
+#define SCL_2 32
 
-std::map<std::string, std::string> mqtt_topics;
-
-// std::string mqtt_topic;
-// std::string mqtt_topic_value;
-
-void setup()
-{
-  /*
-    preferences.putString("ssid", "the robot network");
-    preferences.putString("password", "isaacasimov");
-
-    preferences.putString("mqtt_server", "192.168.1.189");
-    preferences.putString("mqtt_user", "public");
-    preferences.putString("mqtt_password", "public");
-
-    preferences.putUShort("tch_threshold", 12);
-    preferences.putUShort("tch_release", 6);
-  */
-
-  // Set UART log level
-  esp_log_level_set(BOARDNAME, ESP_LOG_VERBOSE);
-
-  pinMode(ONBOARDLED, OUTPUT);
-
+void setup(void) {
   Serial.begin(115200);
-  Serial.setDebugOutput(true);
-  Serial.println("");
-  Serial.println("");
+  while (!Serial) delay(10);     // will pause Zero, Leonardo, etc until serial console opens
 
-  bool success = preferences.begin(BOARDNAME, false);
+  Serial.println("Adafruit EMC2101 test!");
 
-  preferences.putString("ssid", "the robot network");
-  preferences.putString("password", "isaacasimov");
+Wire.begin( SDA_1, SCL_1);
+Wire1.begin( SDA_2, SCL_2);
 
-  preferences.putString("mqtt_server", "192.168.1.189");
-  preferences.putString("mqtt_user", "public");
-  preferences.putString("mqtt_password", "public");
+  // Try to initialize!
+  // if (!emc2101_1.begin(0x4C,&Wire)) {
+  //   Serial.println("Failed to find EMC2101 1 chip");
+  //   while (1) { delay(10); }
+  // }
+  // Serial.println("EMC2101 1 Found!");
 
-  Serial.print("NVM success:");
-  Serial.println(success);
-  Serial.print("NVM ssid:");
-  Serial.println(preferences.getString("ssid", ""));
-  Serial.print("NVM password:");
-  Serial.println(preferences.getString("password", ""));
-  Serial.print("NVM mqtt_server:");
-  Serial.println(preferences.getString("mqtt_server", ""));
-  Serial.print("NVM mqtt_user:");
-  Serial.println(preferences.getString("mqtt_user", ""));
-  Serial.print("NVM mqtt_password:");
-  Serial.println(preferences.getString("mqtt_password", ""));
-  // Serial.print("NVM mqtt_topic:");
-  // Serial.println(preferences.getString("mqtt_topic", ""));
-  preferences.end();
+    // Try to initialize!
+  if (!emc2101_2.begin(0x4C,&Wire1)) {
+    Serial.println("Failed to find EMC2101 2 chip");
+    while (1) { delay(10); }
+  }
+  Serial.println("EMC2101 2 Found!");
 
-  i2c_setup();
-  Wifi_setup();
-  MQTT_setup();
+  //  emc2101.setDataRate(EMC2101_RATE_1_16_HZ);
+  Serial.print("Data rate set to: ");
+  switch (emc2101_2.getDataRate()) {
+    case EMC2101_RATE_1_16_HZ: Serial.println("1/16_HZ"); break;
+    case EMC2101_RATE_1_8_HZ: Serial.println("1/8_HZ"); break;
+    case EMC2101_RATE_1_4_HZ: Serial.println("1/4_HZ"); break;
+    case EMC2101_RATE_1_2_HZ: Serial.println("1/2_HZ"); break;
+    case EMC2101_RATE_1_HZ: Serial.println("1 HZ"); break;
+    case EMC2101_RATE_2_HZ: Serial.println("2 HZ"); break;
+    case EMC2101_RATE_4_HZ: Serial.println("4 HZ"); break;
+    case EMC2101_RATE_8_HZ: Serial.println("8 HZ"); break;
+    case EMC2101_RATE_16_HZ: Serial.println("16 HZ"); break;
+    case EMC2101_RATE_32_HZ: Serial.println("32 HZ"); break;
+  }
 
-  Serial.print(BOARDNAME);
-  Serial.print(" completed in ");
-  Serial.print(millis());
-  Serial.println("ms");
+  emc2101_2.enableTachInput(false);
+  emc2101_2.setPWMDivisor(0);
+  emc2101_2.setDutyCycle(50);
 }
 
-void loop()
-{
-  delay(1000);
+
+
+void loop() {
+  //  Serial.print("External Temperature: ");
+  //  Serial.print(emc2101.getExternalTemperature());
+  //  Serial.println(" degrees C");
+
+  Serial.print("Internal Temperature: ");
+  Serial.print(emc2101_2.getInternalTemperature());
+  Serial.println(" degrees C");
+
+  Serial.print("Duty Cycle: ");
+  Serial.print(emc2101_2.getDutyCycle());
+  Serial.print("% / Fan RPM: ");
+  Serial.print(emc2101_2.getFanRPM());
+  Serial.println(" RPM");
+  Serial.println("");
+
+  delay(500);
 }
