@@ -1,5 +1,6 @@
 #pragma once
 
+#include <Adafruit_EMC2101.h>
 #include <WiFi.h>
 #include <PubSubClient.h>
 #include "esp_wifi.h"
@@ -9,14 +10,16 @@ void checkMQTTconnection();
 void mqttMessageReceived(char *topic, byte *payload, unsigned int length);
 void loopMQTT();
 
-#define MQTT_SERVER "robotmqtt" // Replace with your MQTT server address  
-#define MQTT_PORT 1883 // Replace with your MQTT server port  
+extern Adafruit_EMC2101  emc2101_1;
+extern Adafruit_EMC2101 emc2101_2;
 
-#define MQTT_TOPIC_3 "cabinet/fans/1/rpm" // Replace with your desired topic
-#define MQTT_TOPIC_4 "cabinet/fans/2/rpm" // Replace with your desired topic
-#define MQTT_TOPIC_5 "cabinet/temperature/1" // Replace with your desired topic
-#define MQTT_TOPIC_6 "cabinet/temperature/2" // Replace with your desired topic
+#define MQTT_SERVER "robotmqtt"
+#define MQTT_PORT 1883 
 
-#define MQTT_USER "public" // Replace with your desired topic
-#define MQTT_PASSWORD "public" // Replace with your desired topic
+#define MQTT_TOPIC_FAN_1 "cabinet/fans/1/rpm" 
+#define MQTT_TOPIC_FAN_2 "cabinet/fans/2/rpm" 
+
+
+#define MQTT_USER "public" 
+#define MQTT_PASSWORD "public" 
 

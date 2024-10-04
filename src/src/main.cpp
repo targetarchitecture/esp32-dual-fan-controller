@@ -8,10 +8,12 @@
 
 extern PubSubClient mqttClient;
 
-#define MQTT_TOPIC_1 "cabinet/fans/1/speed" // Replace with your desired topic
-#define MQTT_TOPIC_2 "cabinet/fans/2/speed" // Replace with your desired topic
+#define MQTT_TOPIC_FAN_1_SPEED "cabinet/fans/1/speed"
+#define MQTT_TOPIC_FAN_2_SPEED "cabinet/fans/2/speed"
+#define MQTT_TOPIC_TEMP_1 "cabinet/temperature/1"
+#define MQTT_TOPIC_TEMP_2 "cabinet/temperature/2"
 
-// Adafruit_EMC2101  emc2101_1;
+Adafruit_EMC2101 emc2101_1;
 Adafruit_EMC2101 emc2101_2;
 
 #define SDA_1 27
@@ -26,7 +28,7 @@ void setup(void)
   while (!Serial)
     delay(10); // will pause Zero, Leonardo, etc until serial console opens
 
-  Serial.println("Adafruit EMC2101 test!");
+  Serial.println("Cabinet fans: EMC2101!");
 
   Wifi_setup();
   MQTT_setup();
@@ -35,11 +37,15 @@ void setup(void)
   Wire1.begin(SDA_2, SCL_2);
 
   // Try to initialize!
-  // if (!emc2101_1.begin(0x4C,&Wire)) {
-  //   Serial.println("Failed to find EMC2101 1 chip");
-  //   while (1) { delay(10); }
-  // }
-  // Serial.println("EMC2101 1 Found!");
+  if (!emc2101_1.begin(0x4C, &Wire))
+  {
+    Serial.println("Failed to find EMC2101 1 chip");
+    while (1)
+    {
+      delay(10);
+    }
+  }
+  Serial.println("EMC2101 1 Found!");
 
   // Try to initialize!
   if (!emc2101_2.begin(0x4C, &Wire1))
@@ -53,66 +59,31 @@ void setup(void)
   Serial.println("EMC2101 2 Found!");
 
   emc2101_2.setDataRate(EMC2101_RATE_1_HZ);
-
-  Serial.print("Data rate set to: ");
-  switch (emc2101_2.getDataRate())
-  {
-  case EMC2101_RATE_1_16_HZ:
-    Serial.println("1/16_HZ");
-    break;
-  case EMC2101_RATE_1_8_HZ:
-    Serial.println("1/8_HZ");
-    break;
-  case EMC2101_RATE_1_4_HZ:
-    Serial.println("1/4_HZ");
-    break;
-  case EMC2101_RATE_1_2_HZ:
-    Serial.println("1/2_HZ");
-    break;
-  case EMC2101_RATE_1_HZ:
-    Serial.println("1 HZ");
-    break;
-  case EMC2101_RATE_2_HZ:
-    Serial.println("2 HZ");
-    break;
-  case EMC2101_RATE_4_HZ:
-    Serial.println("4 HZ");
-    break;
-  case EMC2101_RATE_8_HZ:
-    Serial.println("8 HZ");
-    break;
-  case EMC2101_RATE_16_HZ:
-    Serial.println("16 HZ");
-    break;
-  case EMC2101_RATE_32_HZ:
-    Serial.println("32 HZ");
-    break;
-  }
-
   emc2101_2.enableTachInput(true);
   emc2101_2.setPWMDivisor(0);
   emc2101_2.setDutyCycle(50);
+
+  emc2101_1.setDataRate(EMC2101_RATE_1_HZ);
+  emc2101_1.enableTachInput(true);
+  emc2101_1.setPWMDivisor(0);
+  emc2101_1.setDutyCycle(50);
 }
 
 void loop()
 {
-  Serial.print("Internal Temperature: ");
-  Serial.print(emc2101_2.getInternalTemperature());
-  Serial.println(" degrees C");
-
-  Serial.print("Duty Cycle: ");
-  Serial.print(emc2101_2.getDutyCycle());
-  Serial.print("% / Fan RPM: ");
-  Serial.print(emc2101_2.getFanRPM());
-  Serial.println(" RPM");
-  Serial.println("");
-
-
-
   loopMQTT();
 
-    mqttClient.publish(MQTT_TOPIC_1, "50");
-  mqttClient.publish(MQTT_TOPIC_2, "50");
+  std::string FanRPM1 = std::to_string(emc2101_1.getFanRPM());
+  std::string FanRPM2 = std::to_string(emc2101_2.getFanRPM());
+
+  mqttClient.publish(MQTT_TOPIC_FAN_1_SPEED, FanRPM1.c_str());
+  mqttClient.publish(MQTT_TOPIC_FAN_2_SPEED, FanRPM2.c_str());
+
+  std::string temp1 = std::to_string(emc2101_1.getInternalTemperature());
+  std::string temp2 = std::to_string(emc2101_2.getInternalTemperature());
+
+  mqttClient.publish(MQTT_TOPIC_TEMP_1, temp1.c_str());
+  mqttClient.publish(MQTT_TOPIC_TEMP_2, temp2.c_str());
 
   delay(1000);
 }

@@ -29,6 +29,22 @@ void mqttMessageReceived(char *topic, byte *payload, unsigned int length)
 
   Serial.print("Message:");
   Serial.println(receivedMsg.c_str());
+
+  if (strcmp(topic, MQTT_TOPIC_FAN_1) == 0)
+  {
+
+    uint8_t pwm = std::stoi(receivedMsg);
+
+    emc2101_2.setDutyCycle(pwm);
+  }
+
+    if (strcmp(topic, MQTT_TOPIC_FAN_2) == 0)
+  {
+
+    uint8_t pwm = std::stoi(receivedMsg);
+
+    emc2101_2.setDutyCycle(pwm);
+  }
 }
 
 void checkMQTTconnection()
@@ -45,10 +61,7 @@ void checkMQTTconnection()
         break;
       }
 
-      // get the unique id into a variable
-      // String wifiMacString = WiFi.macAddress();
       std::string mqtt_client = "CABINET";
-      // mqtt_client = mqtt_client + "_" + wifiMacString.c_str();
 
       Serial.print(mqtt_client.c_str());
       Serial.print(":");
@@ -67,12 +80,8 @@ void checkMQTTconnection()
     Serial.println("ms :)");
 
     // set to true to get the subscriptions setup again
-    //mqttClient.subscribe(MQTT_TOPIC_1);
-    //mqttClient.subscribe(MQTT_TOPIC_2);
-    mqttClient.subscribe(MQTT_TOPIC_3);
-    mqttClient.subscribe(MQTT_TOPIC_4);
-    mqttClient.subscribe(MQTT_TOPIC_5);
-    mqttClient.subscribe(MQTT_TOPIC_6);
+    mqttClient.subscribe(MQTT_TOPIC_FAN_1);
+    mqttClient.subscribe(MQTT_TOPIC_FAN_2);
   }
 }
 
