@@ -1,7 +1,5 @@
-// Basic demo for readings from Adafruit EMC2101
-#include <Arduino.h>
-#include <Adafruit_EMC2101.h>
 #include <Wire.h>
+#include <Arduino.h>
 #include <PubSubClient.h>
 #include <WiFi.h>
 #include "esp_wifi.h"
@@ -17,92 +15,45 @@ void mqttMessageReceived(char *topic, byte *payload, unsigned int length);
 void loopMQTT();
 
 #define MQTT_SERVER "robotmqtt"
-#define MQTT_PORT 1883 
-#define MQTT_USER "public" 
-#define MQTT_PASSWORD "public" 
-#define MQTT_TOPIC_FAN_1 "cabinet/fans/1/rpm" 
-#define MQTT_TOPIC_FAN_2 "cabinet/fans/2/rpm" 
-#define MQTT_TOPIC_FAN_1_SPEED "cabinet/fans/1/speed"
-#define MQTT_TOPIC_FAN_2_SPEED "cabinet/fans/2/speed"
-#define MQTT_TOPIC_TEMP_1 "cabinet/temperature/1"
-#define MQTT_TOPIC_TEMP_2 "cabinet/temperature/2"
+#define MQTT_PORT 1883
+#define MQTT_USER "public"
+#define MQTT_PASSWORD "public"
+#define MQTT_TOPIC_FAN_1_PWM "cabinet/fans/1/pwm"
+#define MQTT_TOPIC_FAN_2_PWM "cabinet/fans/2/pwm"
+#define MQTT_TOPIC_FAN_1_TACH "cabinet/fans/1/tach"
+#define MQTT_TOPIC_FAN_2_TACH "cabinet/fans/2/tach"
+// #define MQTT_TOPIC_TEMP_1 "cabinet/temperature/1"
+// #define MQTT_TOPIC_TEMP_2 "cabinet/temperature/2"
+#define MQTT_TOPIC_STATUS "cabinet/status"
 
-Adafruit_EMC2101 emc2101_1;
-Adafruit_EMC2101 emc2101_2;
+#define PWM_1 33
+#define TACH_1 32
 
-#define SDA_1 27
-#define SCL_1 26
+#define PWM_2 27
+#define TACH_2 26
 
-#define SDA_2 33
-#define SCL_2 32
+#define pwm_freq 25000
+#define pwm_res 8
 
 void setup(void)
 {
   Serial.begin(115200);
-  while (!Serial)
-    delay(10); // will pause Zero, Leonardo, etc until serial console opens
-
   Serial.println("Cabinet fans: EMC2101!");
+
+  // configure LED PWM
+  ledcAttachPin(PWM_1, pwm_freq, pwm_res);
 
   Wifi_setup();
   MQTT_setup();
 
-  Wire.begin(SDA_1, SCL_1);
-  Wire1.begin(SDA_2, SCL_2);
-
-  // Try to initialize!
-  if (!emc2101_1.begin(0x4C, &Wire))
-  {
-    Serial.println("Failed to find EMC2101 1 chip");
-    while (1)
-    {
-      delay(10);
-    }
-  }
-  Serial.println("EMC2101 1 Found!");
-
-  // Try to initialize!
-  if (!emc2101_2.begin(0x4C, &Wire1))
-  {
-    Serial.println("Failed to find EMC2101 2 chip");
-    while (1)
-    {
-      delay(10);
-    }
-  }
-  Serial.println("EMC2101 2 Found!");
-
-  emc2101_2.setDataRate(EMC2101_RATE_1_HZ);
-  emc2101_2.enableTachInput(true);
-  emc2101_2.setPWMDivisor(0);
-  emc2101_2.setDutyCycle(50);
-
-  emc2101_1.setDataRate(EMC2101_RATE_1_HZ);
-  emc2101_1.enableTachInput(true);
-  emc2101_1.setPWMDivisor(0);
-  emc2101_1.setDutyCycle(50);
 }
 
 void loop()
 {
   loopMQTT();
 
-  std::string FanRPM1 = std::to_string(emc2101_1.getFanRPM());
-  std::string FanRPM2 = std::to_string(emc2101_2.getFanRPM());
-
-  mqttClient.publish(MQTT_TOPIC_FAN_1_SPEED, FanRPM1.c_str());
-  mqttClient.publish(MQTT_TOPIC_FAN_2_SPEED, FanRPM2.c_str());
-
-  std::string temp1 = std::to_string(emc2101_1.getInternalTemperature());
-  std::string temp2 = std::to_string(emc2101_2.getInternalTemperature());
-
-  mqttClient.publish(MQTT_TOPIC_TEMP_1, temp1.c_str());
-  mqttClient.publish(MQTT_TOPIC_TEMP_2, temp2.c_str());
-
   delay(1000);
 }
-
-
 
 void MQTT_setup()
 {
@@ -130,20 +81,21 @@ void mqttMessageReceived(char *topic, byte *payload, unsigned int length)
   Serial.print("Message:");
   Serial.println(receivedMsg.c_str());
 
-  if (strcmp(topic, MQTT_TOPIC_FAN_1) == 0)
+  if (strcmp(topic, MQTT_TOPIC_FAN_1_PWM) == 0)
   {
-
     uint8_t pwm = std::stoi(receivedMsg);
 
-    emc2101_1.setDutyCycle(pwm);
+
+
+//    emc2101_1.setDutyCycle(pwm);
   }
 
-    if (strcmp(topic, MQTT_TOPIC_FAN_2) == 0)
+  if (strcmp(topic, MQTT_TOPIC_FAN_2_PWM) == 0)
   {
 
     uint8_t pwm = std::stoi(receivedMsg);
 
-    emc2101_2.setDutyCycle(pwm);
+  //  emc2101_2.setDutyCycle(pwm);
   }
 }
 
@@ -158,6 +110,7 @@ void checkMQTTconnection()
     {
       if (mqttClient.connected() == true)
       {
+        mqttClient.publish(MQTT_TOPIC_STATUS, "MQTTClient Connected");
         break;
       }
 
@@ -180,8 +133,8 @@ void checkMQTTconnection()
     Serial.println("ms :)");
 
     // set to true to get the subscriptions setup again
-    mqttClient.subscribe(MQTT_TOPIC_FAN_1);
-    mqttClient.subscribe(MQTT_TOPIC_FAN_2);
+    mqttClient.subscribe(MQTT_TOPIC_FAN_1_PWM);
+    mqttClient.subscribe(MQTT_TOPIC_FAN_2_PWM);
   }
 }
 
@@ -191,7 +144,6 @@ void loopMQTT()
 
   mqttClient.loop();
 }
-
 
 /*
   WiFi Events
@@ -226,103 +178,103 @@ void loopMQTT()
 
 void WiFiEvent(WiFiEvent_t event)
 {
-    // Serial.printf("[WiFi-event] event: %d\n", event);
+  // Serial.printf("[WiFi-event] event: %d\n", event);
 
-    switch (event)
-    {
-    case SYSTEM_EVENT_WIFI_READY:
-        Serial.println("WiFi interface ready");
-        break;
-    case SYSTEM_EVENT_SCAN_DONE:
-        Serial.println("Completed scan for access points");
-        break;
-    case SYSTEM_EVENT_STA_START:
-        Serial.println("WiFi client started");
-        break;
-    case SYSTEM_EVENT_STA_STOP:
-        Serial.println("WiFi clients stopped");
-        break;
-    case SYSTEM_EVENT_STA_CONNECTED:
-        Serial.println("Connected to access point");
-        break;
-    case SYSTEM_EVENT_STA_DISCONNECTED:
-        Serial.println("Disconnected from WiFi access point");
-        Serial.println("Reconnecting...");
+  switch (event)
+  {
+  case SYSTEM_EVENT_WIFI_READY:
+    Serial.println("WiFi interface ready");
+    break;
+  case SYSTEM_EVENT_SCAN_DONE:
+    Serial.println("Completed scan for access points");
+    break;
+  case SYSTEM_EVENT_STA_START:
+    Serial.println("WiFi client started");
+    break;
+  case SYSTEM_EVENT_STA_STOP:
+    Serial.println("WiFi clients stopped");
+    break;
+  case SYSTEM_EVENT_STA_CONNECTED:
+    Serial.println("Connected to access point");
+    break;
+  case SYSTEM_EVENT_STA_DISCONNECTED:
+    Serial.println("Disconnected from WiFi access point");
+    Serial.println("Reconnecting...");
 
-        WiFi.begin("the robot network", "isaacasimov");
-        break;
-    case SYSTEM_EVENT_STA_AUTHMODE_CHANGE:
-        Serial.println("Authentication mode of access point has changed");
-        break;
-    case SYSTEM_EVENT_STA_GOT_IP:
-        Serial.print("Obtained IP address: ");
-        Serial.print(WiFi.localIP());
+    WiFi.begin("the robot network", "isaacasimov");
+    break;
+  case SYSTEM_EVENT_STA_AUTHMODE_CHANGE:
+    Serial.println("Authentication mode of access point has changed");
+    break;
+  case SYSTEM_EVENT_STA_GOT_IP:
+    Serial.print("Obtained IP address: ");
+    Serial.print(WiFi.localIP());
 
-        Serial.print(" in ");
-        Serial.print(millis());
-        Serial.println("ms");
+    Serial.print(" in ");
+    Serial.print(millis());
+    Serial.println("ms");
 
-        break;
-    case SYSTEM_EVENT_STA_LOST_IP:
-        Serial.println("Lost IP address and IP address is reset to 0");
-        break;
-    case SYSTEM_EVENT_STA_WPS_ER_SUCCESS:
-        Serial.println("WiFi Protected Setup (WPS): succeeded in enrollee mode");
-        break;
-    case SYSTEM_EVENT_STA_WPS_ER_FAILED:
-        Serial.println("WiFi Protected Setup (WPS): failed in enrollee mode");
-        break;
-    case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT:
-        Serial.println("WiFi Protected Setup (WPS): timeout in enrollee mode");
-        break;
-    case SYSTEM_EVENT_STA_WPS_ER_PIN:
-        Serial.println("WiFi Protected Setup (WPS): pin code in enrollee mode");
-        break;
-    case SYSTEM_EVENT_AP_START:
-        Serial.println("WiFi access point started");
-        break;
-    case SYSTEM_EVENT_AP_STOP:
-        Serial.println("WiFi access point  stopped");
-        break;
-    case SYSTEM_EVENT_AP_STACONNECTED:
-        Serial.println("Client connected");
-        break;
-    case SYSTEM_EVENT_AP_STADISCONNECTED:
-        Serial.println("Client disconnected");
-        break;
-    case SYSTEM_EVENT_AP_STAIPASSIGNED:
-        Serial.println("Assigned IP address to client");
-        break;
-    case SYSTEM_EVENT_AP_PROBEREQRECVED:
-        Serial.println("Received probe request");
-        break;
-    case SYSTEM_EVENT_GOT_IP6:
-        Serial.println("IPv6 is preferred");
-        break;
-    case SYSTEM_EVENT_ETH_START:
-        Serial.println("Ethernet started");
-        break;
-    case SYSTEM_EVENT_ETH_STOP:
-        Serial.println("Ethernet stopped");
-        break;
-    case SYSTEM_EVENT_ETH_CONNECTED:
-        Serial.println("Ethernet connected");
-        break;
-    case SYSTEM_EVENT_ETH_DISCONNECTED:
-        Serial.println("Ethernet disconnected");
-        break;
-    case SYSTEM_EVENT_ETH_GOT_IP:
-        Serial.println("Obtained IP address");
-        break;
-    default:
-        break;
-    }
+    break;
+  case SYSTEM_EVENT_STA_LOST_IP:
+    Serial.println("Lost IP address and IP address is reset to 0");
+    break;
+  case SYSTEM_EVENT_STA_WPS_ER_SUCCESS:
+    Serial.println("WiFi Protected Setup (WPS): succeeded in enrollee mode");
+    break;
+  case SYSTEM_EVENT_STA_WPS_ER_FAILED:
+    Serial.println("WiFi Protected Setup (WPS): failed in enrollee mode");
+    break;
+  case SYSTEM_EVENT_STA_WPS_ER_TIMEOUT:
+    Serial.println("WiFi Protected Setup (WPS): timeout in enrollee mode");
+    break;
+  case SYSTEM_EVENT_STA_WPS_ER_PIN:
+    Serial.println("WiFi Protected Setup (WPS): pin code in enrollee mode");
+    break;
+  case SYSTEM_EVENT_AP_START:
+    Serial.println("WiFi access point started");
+    break;
+  case SYSTEM_EVENT_AP_STOP:
+    Serial.println("WiFi access point  stopped");
+    break;
+  case SYSTEM_EVENT_AP_STACONNECTED:
+    Serial.println("Client connected");
+    break;
+  case SYSTEM_EVENT_AP_STADISCONNECTED:
+    Serial.println("Client disconnected");
+    break;
+  case SYSTEM_EVENT_AP_STAIPASSIGNED:
+    Serial.println("Assigned IP address to client");
+    break;
+  case SYSTEM_EVENT_AP_PROBEREQRECVED:
+    Serial.println("Received probe request");
+    break;
+  case SYSTEM_EVENT_GOT_IP6:
+    Serial.println("IPv6 is preferred");
+    break;
+  case SYSTEM_EVENT_ETH_START:
+    Serial.println("Ethernet started");
+    break;
+  case SYSTEM_EVENT_ETH_STOP:
+    Serial.println("Ethernet stopped");
+    break;
+  case SYSTEM_EVENT_ETH_CONNECTED:
+    Serial.println("Ethernet connected");
+    break;
+  case SYSTEM_EVENT_ETH_DISCONNECTED:
+    Serial.println("Ethernet disconnected");
+    break;
+  case SYSTEM_EVENT_ETH_GOT_IP:
+    Serial.println("Obtained IP address");
+    break;
+  default:
+    break;
+  }
 }
 
 void Wifi_setup()
 {
-    // register wifi events
-    WiFi.onEvent(WiFiEvent);
+  // register wifi events
+  WiFi.onEvent(WiFiEvent);
 
-    WiFi.begin("the robot network", "isaacasimov");
+  WiFi.begin("the robot network", "isaacasimov");
 }
